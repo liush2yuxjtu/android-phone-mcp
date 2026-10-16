@@ -169,6 +169,8 @@ adb -s "$ANDROID_SERIAL" exec-out cat /data/local/tmp/android-phone-mcp-uidump.x
 
 Then in the MCP client: *“Call phone_connect, then phone_observe, then phone_launch app=settings.”*
 
+To prove a Mac-hosted QR can be scanned by the emulator camera (no physical phone), use the project `/verify` skill (`.cursor/skills/verify/SKILL.md`) and [`scripts/verify-qr-mac-scan.md`](scripts/verify-qr-mac-scan.md). Verdicts are PASS / FAIL / BLOCKED / SKIP — camera PASS requires `/status` `scanned: true` and a scanner User-Agent (e.g. `ZXing (Android)`), not an `adb` VIEW intent.
+
 ### Limitations
 
 - Needs a reachable `adb` device; this server does not start the emulator for you.
