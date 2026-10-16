@@ -65,3 +65,5 @@ Expected: `wm size` prints a resolution, and `uiautomator dump` writes XML that 
 ## 5. Point MCP at that device
 
 Set `ANDROID_SERIAL=emulator-5554` in the MCP client env (see README). Then ask the client to call `phone_connect`.
+
+For Mac-hosted QR → emulator camera (no physical phone), see [`verify-qr-mac-scan.md`](./verify-qr-mac-scan.md) and `.cursor/skills/verify/SKILL.md`. Use `-camera-back imagefile:<png>` and tile QRs in the **top** of a 1280×720 feed — do not rely on VirtualScene.
