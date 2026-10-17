@@ -57,7 +57,7 @@ From the repo root:
 npm test && npm run build
 ```
 
-Same commands as CI (`.github/workflows/ci.yml`). **PASS** = both exit 0. This does **not** prove a device or a camera scan.
+Same commands formerly run in GitHub Actions CI (removed in favor of this skill). **PASS** = both exit 0. This does **not** prove a device or a camera scan.
 
 ## ADB MCP smoke
 
