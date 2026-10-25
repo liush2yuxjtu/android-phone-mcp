@@ -1,6 +1,6 @@
 ---
 name: verify
-description: Verify android-phone-mcp and Mac↔Android QR scan capability by runtime observation (emulator camera decode of a host challenge QR). Use when confirming MCP/adb control or that a phone can scan a Mac-hosted QR without a physical device.
+description: Verify android-phone-mcp (package/ADB/QR camera) plus TLC on formal/ when present. Use when confirming MCP/adb control, Mac-hosted QR camera scan, or formal ADB-op exclusivity invariants.
 ---
 
 # /verify — android-phone-mcp
@@ -31,10 +31,11 @@ Report each check separately, then one overall verdict:
 - Overall **PASS** only if every non-SKIP check is PASS.
 - If any required check is **FAIL**, overall is FAIL.
 - Else if any required check is **BLOCKED**, overall is BLOCKED.
+- When `formal/` exists, the **tla_formal** check is required (not SKIP). Missing Java/`tla2tools.jar` → **FAIL** with install instructions (not SKIP); invariant violation → **FAIL**. Overall cannot be PASS while tla_formal is red.
 
 ## Claims
 
-Two independent claims. Verify the ones the user asked for; when they say `/verify` with no qualifier, attempt all three checks below (package + both claims).
+Two runtime claims plus a formal check when `formal/` exists. Verify the ones the user asked for; when they say `/verify` with no qualifier, attempt package + both runtime claims + **tla_formal** (if `formal/` is present).
 
 1. **ADB MCP control.** An AI/client can control Android via this open-source ADB MCP: a reachable emulator or USB device, then `phone_connect` / `phone_observe` (or the ADB equivalent in `scripts/verify-adb.sh`).
 2. **Camera QR e2e.** An emulator can **scan a Mac-hosted challenge QR through its camera**, then the host `/status` shows `scanned: true` **and** a **scanner** User-Agent (e.g. `ZXing (Android)`).
@@ -48,6 +49,36 @@ Claim 2 is **not** proven by:
 - A `/status` of `scanned: true` whose `ua` is `curl`, `Wget`, `Dalvik`, or a browser
 
 Those shortcuts hit the URL without a camera decode. They are **FAIL** if presented as the camera claim.
+
+
+## Formal (TLA+) — `tla_formal` (required when `formal/` exists)
+
+Models single-serial ADB op exclusivity (`Inv_AtMostOneInflight`, disconnect/idle rules). See `formal/README.md`.
+
+### Install TLC
+
+1. Java 11+ (`java -version`).
+2. Download `tla2tools.jar` from [TLA+ releases](https://github.com/tlaplus/tlaplus/releases).
+
+Optional: `export TLA2TOOLS_JAR=/path/to/tla2tools.jar`.
+
+### Run
+
+```bash
+JAR="${TLA2TOOLS_JAR:-tla2tools.jar}"
+test -f "$JAR" || JAR="./tla2tools.jar"
+command -v java >/dev/null || { echo "tla_formal FAIL: java missing — install JDK 11+"; exit 1; }
+test -f "$JAR" || { echo "tla_formal FAIL: tla2tools.jar missing — https://github.com/tlaplus/tlaplus/releases"; exit 1; }
+( cd formal && java -cp "$JAR" tlc2.TLC -config Spec.cfg Spec.tla )
+```
+
+| Outcome | Verdict |
+| --- | --- |
+| TLC exits 0 + `No error has been found` | **PASS** |
+| Invariant/property violation or TLC error | **FAIL** |
+| `java` or `tla2tools.jar` missing while `formal/` exists | **FAIL** (install above; do not SKIP) |
+
+Read TLC results with the pstack `/statechart` skill (commands change by release — do not copy them here).
 
 ## Package check (always cheap)
 
@@ -143,15 +174,17 @@ Cleanup kills **only** processes this run started (challenge server, emulator yo
 ## /verify
 overall: PASS | FAIL | BLOCKED | SKIP
 
-- package:   PASS|FAIL|SKIP     — npm test && npm run build
-- adb_mcp:   PASS|FAIL|BLOCKED|SKIP — adb + phone_connect/observe or verify-adb.sh
-- qr_camera: PASS|FAIL|BLOCKED|SKIP — /status scanned:true + scanner UA
+- package:    PASS|FAIL|SKIP     — npm test && npm run build
+- adb_mcp:    PASS|FAIL|BLOCKED|SKIP — adb + phone_connect/observe or verify-adb.sh
+- qr_camera:  PASS|FAIL|BLOCKED|SKIP — /status scanned:true + scanner UA
+- tla_formal: PASS|FAIL|SKIP     — TLC on formal/Spec.tla (required when formal/ exists; missing jar/Java = FAIL)
 
 evidence:
 - $QR_E2E_DIR/status.json
 - $QR_E2E_DIR/decode-result.png
+- formal TLC stdout (No error has been found)
 
-notes: <blockers, ABI, emulator flag, scanner package>
+notes: <blockers, ABI, emulator flag, scanner package, TLA2TOOLS_JAR>
 ```
 
 Quote the `/status` JSON in the report. If `ua` is missing or not a scanner, `qr_camera` is FAIL.
